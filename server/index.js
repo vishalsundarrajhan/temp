@@ -116,12 +116,16 @@ app.post('/api/rescore', async (req, res) => {
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/dist/index.html'), (err) => {
     if (err) {
-      // If index.html is missing (not built yet), show a helpful message
       res.status(404).send("Frontend assets not found. Did you run 'npm run build' in the client folder?");
     }
   });
 });
 
-app.listen(port, () => {
+// Export for serverless (Vercel)
+module.exports = app;
+
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(port, () => {
     console.log(`Server ready on port ${port}`);
-});
+  });
+}

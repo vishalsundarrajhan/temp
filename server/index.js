@@ -1,10 +1,11 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config({ path: '../.env' });
 const { scoreHousehold } = require('./scorer');
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 // Middlewares
 app.use(cors({
@@ -13,6 +14,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+
+// Serve static files from React app (production)
+app.use(express.static(path.join(__dirname, '../client/dist')));
 
 // Handle preflight
 app.options('*', cors());
@@ -59,7 +63,6 @@ app.post('/api/analyse', async (req, res) => {
                 console.log(`Scored household_id: ${scored.household_id}`);
             } catch (err) {
                 console.error(`Error scoring household ${household.household_id}:`, err);
-                // Fallback for individual household failure
                 const id = household.household_id || 'unknown';
                 results.push({
                     household_id: id,
@@ -78,7 +81,6 @@ app.post('/api/analyse', async (req, res) => {
             }
         }
 
-        // Sort by score descending
         results.sort((a, b) => b.score - a.score);
 
         res.json({
@@ -110,6 +112,16 @@ app.post('/api/rescore', async (req, res) => {
     }
 });
 
+// All other GET requests not handled before will return our React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'), (err) => {
+    if (err) {
+      // If index.html is missing (not built yet), show a helpful message
+      res.status(404).send("Frontend assets not found. Did you run 'npm run build' in the client folder?");
+    }
+  });
+});
+
 app.listen(port, () => {
-    console.log(`Backend ready on port ${port}`);
+    console.log(`Server ready on port ${port}`);
 });
